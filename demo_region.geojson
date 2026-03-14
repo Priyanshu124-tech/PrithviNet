@@ -1,0 +1,68 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bhilai Steel Plant (Industrial Zone)",
+        "zone_type": "industrial",
+        "fill": "#ef4444",
+        "stroke": "#b91c1c"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [81.365, 21.180],
+            [81.410, 21.180],
+            [81.415, 21.210],
+            [81.370, 21.210],
+            [81.365, 21.180]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bhilai Township (Residential)",
+        "zone_type": "residential",
+        "fill": "#10b981",
+        "stroke": "#059669"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [81.320, 21.190],
+            [81.360, 21.190],
+            [81.360, 21.230],
+            [81.310, 21.220],
+            [81.320, 21.190]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Maroda Reservoir (Water Body)",
+        "zone_type": "water",
+        "fill": "#3b82f6",
+        "stroke": "#2563eb"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [81.330, 21.160],
+            [81.360, 21.160],
+            [81.355, 21.180],
+            [81.335, 21.180],
+            [81.330, 21.160]
+          ]
+        ]
+      }
+    }
+  ]
+}

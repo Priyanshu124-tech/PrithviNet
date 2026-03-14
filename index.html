@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrithviNet — Smart Environmental Monitoring & Compliance Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- 1. LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" stroke="#00d4ff" stroke-width="2" />
+        <path d="M10 16 Q13 10 16 16 Q19 22 22 16" stroke="#00d4ff" stroke-width="2" fill="none"
+          stroke-linecap="round" />
+        <circle cx="16" cy="16" r="3" fill="#00d4ff" />
+      </svg>
+      <span class="brand-text">PrithviNet</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <!-- Active dashboard icon -->
+      <a href="#" class="nav-item active" data-page="dashboard" data-role-require="dashboard" onclick="switchPage('dashboard')">
+        <div class="nav-indicator"></div>
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </a>
+      <!-- Alerts icon with badge -->
+      <a href="#" class="nav-item has-badge" data-page="alerts" data-role-require="alerts" onclick="switchPage('alerts')" title="Alerts">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <span class="badge" id="alert-badge">0</span>
+      </a>
+      <!-- Report icon -->
+      <a href="#" class="nav-item" data-page="report" data-role-require="reports" onclick="switchPage('report')" title="Report Incident">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <!-- Entity Management -->
+      <a href="entities.html" class="nav-item" title="Entity Management" data-role-require="entities">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 22h16M4 2v20M20 2v20M8 22V6h8v16M12 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <!-- Civic / Compliance Monitoring -->
+      <a href="civic.html" class="nav-item" title="Compliance Dashboard" data-role-require="civic">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </a>
+    </nav>
+    <div class="sidebar-status">
+      <div class="status-dot online"></div>
+      <span>Online</span>
+    </div>
+    <div id="role-indicator">👑 <span>Super Admin</span></div>
+  </aside>
+
+  <!-- 2. MAIN CONTENT SPLIT LAYOUT -->
+  <main class="main-content" id="page-dashboard">
+
+    <!-- LEFT COLUMN: CARDS -->
+    <section class="data-col">
+      <div class="summary-col">
+
+      <!-- TAB SWITCHER -->
+      <div class="param-tabs" id="param-tabs">
+        <button class="param-tab active" data-type="air"><span class="icon">☁️</span> Air</button>
+        <button class="param-tab" data-type="water"><span class="icon">💧</span> Water</button>
+        <button class="param-tab" data-type="noise"><span class="icon">🔊</span> Noise</button>
+      </div>
+
+      <!-- FORECAST CARD (LIGHT) -->
+      <div class="card forecast-card">
+        <div class="fc-header">
+          <div class="fc-location-info">
+            <div class="fc-location" id="fc-location-name">BHILAI REGION <svg viewBox="0 0 24 24" class="icon-sm"
+                fill="none">
+                <path d="M12 2L2 22l10-4 10 4L12 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              </svg></div>
+            <div class="fc-status" id="fc-status">High</div>
+            <div class="fc-time" id="fc-time">Jul 16 12:00 PM, local time</div>
+          </div>
+          <div class="fc-right-actions">
+            <div class="fc-aqi-circle">
+              <svg viewBox="0 0 64 64" class="ring-svg">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#f1f5f9" stroke-width="4"></circle>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#ff9800" stroke-width="4" stroke-dasharray="175.9"
+                  stroke-dashoffset="87.95" id="fc-ring-progress" style="transition: stroke-dashoffset 1s ease-in-out;">
+                </circle>
+                <circle cx="60" cy="32" r="3" fill="#ff9800" id="fc-ring-dot"
+                  style="transition: transform 1s ease-in-out; transform-origin: 32px 32px; transform: rotate(180deg);">
+                </circle>
+              </svg>
+              <div class="circle-content">
+                <div class="circle-val" id="fc-aqi-val">247</div>
+                <div class="circle-lbl">AQI</div>
+              </div>
+            </div>
+            <button class="expand-btn" id="expand-btn" onclick="toggleExpanded()" title="Detailed View">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="12" cy="16" r="1.2" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="fc-chart-container">
+          <canvas id="forecastChart"></canvas>
+        </div>
+        <div class="fc-footer">
+          <div class="fcf-left">
+            <div class="fcf-title">24H FORECAST</div>
+            <div class="fcf-subtitle">Selected Ward</div>
+          </div>
+          <div class="fcf-dots">
+            <div class="dot good"></div>
+            <div class="dot moderate"></div>
+            <div class="dot good"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERSONALISED ACTION PLAN CARD (DARK) -->
+      <div class="card aqi-card reco-card" id="reco-card">
+        <div class="aqi-pulse-ring" id="aqi-pulse-ring"></div>
+
+        <!-- Header -->
+        <div class="reco-header">
+          <div class="reco-title-row">
+            <span class="reco-title">PERSONALISED ACTION PLAN</span>
+            <div class="confidence-badge" id="reco-conf-badge">
+              <div class="conf-dot"></div>
+              <span id="reco-conf-val">—</span>
+            </div>
+          </div>
+          <div class="aqi-location" id="aqi-card-location">📍 BHILAI STEEL PLANT (INDUSTRIAL ZONE)</div>
+        </div>
+
+        <!-- AQI Headline -->
+        <div class="reco-headline-row">
+          <div class="reco-aqi-pill" id="reco-aqi-pill">
+            <span class="reco-aqi-label">AQI</span>
+            <span class="reco-aqi-val" id="aqi-card-val">—</span>
+          </div>
+          <div class="reco-headline" id="reco-headline">Loading recommendations…</div>
+        </div>
+        <div class="reco-summary" id="reco-summary"></div>
+
+        <!-- Time-sensitive alerts from reports -->
+        <div class="reco-alerts" id="reco-alerts"></div>
+
+        <!-- Guideline columns -->
+        <div class="reco-cols">
+          <div class="reco-col">
+            <div class="reco-col-header">
+              <span class="reco-col-icon">🚶</span>
+              <span class="reco-col-title">OUTDOOR<br>GUIDELINES</span>
+            </div>
+            <ol class="reco-list" id="reco-outdoor"></ol>
+          </div>
+          <div class="reco-col">
+            <div class="reco-col-header">
+              <span class="reco-col-icon">🏠</span>
+              <span class="reco-col-title">INDOOR<br>GUIDELINES</span>
+            </div>
+            <ol class="reco-list" id="reco-indoor"></ol>
+          </div>
+        </div>
+
+        <!-- Footer meta -->
+        <div class="reco-footer">
+          <span id="reco-meta">Based on local data &amp; map pins</span>
+          <button class="reco-refresh-btn" onclick="refreshRecommendations()" title="Refresh">↻</button>
+        </div>
+      </div>
+
+      </div><!-- /.summary-col -->
+
+      <!-- DETAIL PANEL (shown when expanded) -->
+      <div class="detail-panel" id="detail-panel">
+
+        <!-- Header -->
+        <div class="dp-header">
+          <div class="dp-top-row">
+            <span class="dp-location" id="dp-location">BHILAI
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 22l10-4 10 4L12 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
+            <svg class="dp-bell" viewBox="0 0 24 24" fill="none">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="dp-condition-row">
+            <div class="dp-condition-left">
+              <div class="dp-condition" id="dp-condition">Extreme</div>
+              <div class="dp-subtime" id="dp-subtime">First 138/20%, local time</div>
+            </div>
+            <div class="dp-aqi-badge">
+              <div class="dp-aqi-num" id="dp-aqi-num">202</div>
+              <div class="dp-aqi-lbl">AQI</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pollutants Row -->
+        <div class="dp-pollutants">
+          <div class="dp-poll-item">
+            <span class="dp-p-val" id="dp-p-aqi">202</span>
+            <span class="dp-p-lbl">AQI</span>
+          </div>
+          <div class="dp-poll-sep"></div>
+          <div class="dp-poll-item">
+            <span class="dp-p-val" id="dp-p-no2">27</span>
+            <span class="dp-p-lbl">NO₂</span>
+          </div>
+          <div class="dp-poll-sep"></div>
+          <div class="dp-poll-item dp-poll-highlight">
+            <span class="dp-p-val" id="dp-p-pm25">168</span>
+            <span class="dp-p-lbl">PM2.5</span>
+          </div>
+          <div class="dp-poll-sep"></div>
+          <div class="dp-poll-item">
+            <span class="dp-p-val" id="dp-p-pm10">202</span>
+            <span class="dp-p-lbl">PM10</span>
+          </div>
+          <div class="dp-poll-sep"></div>
+          <div class="dp-poll-item">
+            <span class="dp-p-val" id="dp-p-o3">20</span>
+            <span class="dp-p-lbl">O₃</span>
+          </div>
+        </div>
+
+        <!-- Hourly Chart -->
+        <div class="dp-chart-section">
+          <div class="dp-time-label" id="dp-time-label">Loading...</div>
+          <div class="dp-chart-wrap">
+            <canvas id="detailChart"></canvas>
+          </div>
+          <!-- Time axis rendered by Chart.js -->
+        </div>
+
+        <!-- Industrial Monitoring Intelligence -->
+        <div class="dp-monitor-section">
+          <div class="dp-monitor-header">
+            <div class="dp-monitor-title">Industrial Monitoring Intelligence</div>
+            <div class="dp-monitor-sub" id="dp-monitor-sub">Live operational context</div>
+          </div>
+
+          <div class="dp-monitor-grid">
+            <article class="dp-monitor-card">
+              <div class="dp-monitor-card-title">Industrial Monitoring Logs</div>
+              <ul class="dp-log-list" id="dp-log-list">
+                <li class="dp-log-empty">Waiting for live monitoring updates...</li>
+              </ul>
+            </article>
+
+            <article class="dp-monitor-card">
+              <div class="dp-monitor-card-title">Special Monitoring Campaigns</div>
+              <ul class="dp-campaign-list" id="dp-campaign-list">
+                <li class="dp-campaign-item">No campaign windows active right now.</li>
+              </ul>
+            </article>
+
+            <article class="dp-monitor-card">
+              <div class="dp-monitor-card-title">Periodic Reports (Monthly / Yearly)</div>
+              <div class="dp-periodic-grid" id="dp-periodic-grid">
+                <div class="dp-periodic-pill">
+                  <span>Monthly</span>
+                  <strong>--</strong>
+                </div>
+                <div class="dp-periodic-pill">
+                  <span>Yearly</span>
+                  <strong>--</strong>
+                </div>
+                <div class="dp-periodic-pill">
+                  <span>Compliance</span>
+                  <strong>--</strong>
+                </div>
+                <div class="dp-periodic-pill">
+                  <span>Variance</span>
+                  <strong>--</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="dp-monitor-card">
+              <div class="dp-monitor-card-title">Comparison Charts & Trend Analysis</div>
+              <div class="dp-compare-bars" id="dp-compare-bars">
+                <div class="dp-compare-row">
+                  <span>Selected Area</span>
+                  <div class="dp-compare-track"><i style="width:0%"></i></div>
+                  <em>--</em>
+                </div>
+              </div>
+              <div class="dp-trend-insight" id="dp-trend-insight">Trend insight will appear after enough readings.</div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="dp-tips-section">
+          <div class="dp-tips-header">
+            <div class="dp-tips-title">TIPS BY CATEGORY</div>
+            <div class="dp-tips-sub">Tap to learn more</div>
+          </div>
+          <div class="dp-tips-grid">
+            <button class="tip-btn" title="Running outdoors">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="13" cy="4" r="1.5" fill="currentColor" stroke="none"/>
+                <path d="M6 20l3.5-6 3 3 2.5-5"/>
+                <path d="M5 13.5l3-1 2-3 3.5-2 2 2 3-0.5"/>
+              </svg>
+            </button>
+            <button class="tip-btn" title="Cycling">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="16" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+                <path d="M6 16l4.5-6h4l2 3"/>
+                <path d="M11 10l1.5 6"/>
+              </svg>
+            </button>
+            <button class="tip-btn tip-alert" title="Outdoor alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 0 1 0 20"/>
+                <path d="M12 2a10 10 0 0 0 0 20"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span class="tip-badge">2.1</span>
+            </button>
+            <button class="tip-btn" title="Indoor stay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /.detail-panel -->
+
+    </section>
+
+    <!-- RIGHT COLUMN: MAP -->
+    <section class="map-col">
+      <div id="map" class="map-container"></div>
+
+      <div class="map-search-shell" id="map-search-shell">
+        <label class="map-search-label" for="industry-search-input">Find Industry</label>
+        <div class="map-search-input-wrap">
+          <input
+            id="industry-search-input"
+            class="map-search-input"
+            type="text"
+            placeholder="Search by industry, type, or category"
+            autocomplete="off"
+          />
+          <button class="map-search-clear" id="industry-search-clear" type="button" aria-label="Clear industry search">×</button>
+        </div>
+        <div class="map-search-results" id="industry-search-results" hidden></div>
+      </div>
+
+      <!-- Absolute positioned overlays inside map -->
+      <button class="map-view-toggle glass-btn" id="heatmap-toggle" onclick="toggleHeatmap()">
+        <span id="heatmap-toggle-lbl">🗺️ Ward View</span>
+      </button>
+
+      <div class="map-zoom-controls">
+        <button class="glass-btn zoom-btn" onclick="mapZoomIn()">+</button>
+        <button class="glass-btn zoom-btn" onclick="mapZoomOut()">−</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ALERTS PAGE -->
+  <section class="alerts-page" id="page-alerts">
+
+    <!-- LEFT: Alert Feed -->
+    <div class="al-feed-col">
+      <div class="al-col-header">
+        <div>
+          <div class="al-col-title">Operations Inbox</div>
+          <div class="al-col-heading">Compliance Triage</div>
+          <div class="al-col-sub" id="al-timestamp">Loading active alerts, missing reports, and escalations...</div>
+        </div>
+        <button class="al-back-btn" onclick="switchPage('dashboard')" title="Back to Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="al-inbox-tabs" id="al-inbox-tabs">
+        <button class="al-tab-btn active" type="button" data-tab="activeAlerts" onclick="setOpsTab('activeAlerts')">Active Alerts <span id="al-tab-count-alerts">0</span></button>
+        <button class="al-tab-btn" type="button" data-tab="missingReports" onclick="setOpsTab('missingReports')">Missing Reports <span id="al-tab-count-missing">0</span></button>
+        <button class="al-tab-btn" type="button" data-tab="escalations" onclick="setOpsTab('escalations')">Escalations <span id="al-tab-count-escalations">0</span></button>
+      </div>
+
+      <div class="al-alerts-list" id="al-alerts-list">
+        <div class="al-loading">Loading operations inbox...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Stats + Controls -->
+    <div class="al-side-col">
+
+      <div class="al-stats-card">
+        <div class="al-section-label">COMPLIANCE KPI</div>
+        <div class="al-stats-grid">
+          <div class="al-stat critical">
+            <div class="al-stat-num" id="al-stat-critical">0</div>
+            <div class="al-stat-lbl">Open Critical</div>
+          </div>
+          <div class="al-stat warning">
+            <div class="al-stat-num" id="al-stat-warning">0</div>
+            <div class="al-stat-lbl">Open Warning</div>
+          </div>
+          <div class="al-stat reports">
+            <div class="al-stat-num" id="al-stat-sla">0</div>
+            <div class="al-stat-lbl">SLA Breaches</div>
+          </div>
+          <div class="al-stat wards">
+            <div class="al-stat-num" id="al-stat-mtta">0m</div>
+            <div class="al-stat-lbl">Mean Ack Time</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="al-stats-card">
+        <div class="al-section-label">MISSING REPORTS</div>
+        <div class="al-stats-grid">
+          <div class="al-stat warning">
+            <div class="al-stat-num" id="al-stat-overdue">0</div>
+            <div class="al-stat-lbl">Overdue Now</div>
+          </div>
+          <div class="al-stat wards">
+            <div class="al-stat-num" id="al-stat-due-soon">0</div>
+            <div class="al-stat-lbl">Due Soon</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="al-notif-card">
+        <div class="al-section-label">REPEAT OFFENDERS (30D)</div>
+        <div class="al-offender-list" id="al-offender-list">
+          <div class="al-loading">Loading repeat offenders...</div>
+        </div>
+      </div>
+
+      <div class="al-threshold-card">
+        <div class="al-section-label">SLA & RESPONSE</div>
+        <div class="al-threshold-list">
+          <div class="al-thresh-row">
+            <span class="al-thresh-lbl">Critical escalation (L1)</span>
+            <div class="al-thresh-right"><span class="al-thresh-val">30 min</span><div class="al-thresh-dot" style="background:#ef4444"></div></div>
+          </div>
+          <div class="al-thresh-row">
+            <span class="al-thresh-lbl">Critical escalation (L2)</span>
+            <div class="al-thresh-right"><span class="al-thresh-val">2 hours</span><div class="al-thresh-dot" style="background:#f97316"></div></div>
+          </div>
+          <div class="al-thresh-row">
+            <span class="al-thresh-lbl">Missing report reminder</span>
+            <div class="al-thresh-right"><span class="al-thresh-val">T+0</span><div class="al-thresh-dot" style="background:#fbbf24"></div></div>
+          </div>
+          <div class="al-thresh-row">
+            <span class="al-thresh-lbl">Missing report escalation</span>
+            <div class="al-thresh-right"><span class="al-thresh-val">T+2h</span><div class="al-thresh-dot" style="background:#fbbf24"></div></div>
+          </div>
+          <div class="al-thresh-row">
+            <span class="al-thresh-lbl">Auto-close window</span>
+            <div class="al-thresh-right"><span class="al-thresh-val">120 min</span><div class="al-thresh-dot" style="background:#8b5cf6"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="al-threshold-card">
+        <div class="al-section-label">TREND VIEW</div>
+        <div class="al-inbox-tabs" style="grid-template-columns:1fr 1fr">
+          <button class="al-tab-btn active" type="button" id="al-window-7d" onclick="setTrendWindow('7d')">7D</button>
+          <button class="al-tab-btn" type="button" id="al-window-30d" onclick="setTrendWindow('30d')">30D</button>
+        </div>
+        <div class="al-inbox-tabs" style="grid-template-columns:1fr 1fr 1fr">
+          <button class="al-tab-btn active" type="button" id="al-group-industry" onclick="setTrendGroup('industry')">Industry</button>
+          <button class="al-tab-btn" type="button" id="al-group-parameter" onclick="setTrendGroup('parameter')">Parameter</button>
+          <button class="al-tab-btn" type="button" id="al-group-region" onclick="setTrendGroup('region')">Region</button>
+        </div>
+        <div class="al-offender-list" id="al-trend-list">
+          <div class="al-loading">Loading trends...</div>
+        </div>
+      </div>
+
+      <div class="al-threshold-card">
+        <div class="al-section-label">COMPLIANCE HEATMAP</div>
+        <div id="al-ops-map" class="al-ops-map"></div>
+        <div class="al-col-sub" id="al-map-filter-label">Map and list are synchronized for active alerts.</div>
+      </div>
+
+    </div>
+
+    <aside class="al-drawer" id="al-alert-drawer" hidden>
+      <div class="al-drawer-header">
+        <div>
+          <div class="al-drawer-title" id="al-drawer-title">Alert Detail</div>
+          <div class="al-drawer-sub" id="al-drawer-sub">Timeline and suggested actions</div>
+        </div>
+        <button class="al-back-btn" type="button" onclick="closeAlertDrawer()" title="Close detail panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="al-drawer-body">
+        <div class="al-drawer-copy" id="al-drawer-copy">Select an item from Operations Inbox to inspect live readings, legal limits, and SLA timeline.</div>
+        <div class="al-drawer-timeline" id="al-drawer-timeline"></div>
+      </div>
+      <div class="al-drawer-actions" id="al-drawer-actions">
+        <button type="button" onclick="quickAlertAction('acknowledged')">Acknowledge</button>
+        <button type="button" onclick="quickAssignAlert()">Assign</button>
+        <button type="button" onclick="quickAlertAction('in_action')">In Action</button>
+        <button type="button" onclick="quickAlertAction('escalated')">Escalate</button>
+        <button type="button" onclick="quickAlertAction('resolved')">Resolve</button>
+      </div>
+    </aside>
+  </section>
+
+  <!-- REPORT PAGE -->
+  <section class="report-page" id="page-report">
+
+    <!-- LEFT: FORM -->
+    <div class="rp-form-col">
+      <div class="rp-form-card">
+
+        <div class="rp-form-header">
+          <div>
+            <div class="rp-form-title">Environmental Reporting</div>
+            <div class="rp-form-sub" id="rp-form-sub">Submit a citizen incident or a field monitoring reading</div>
+          </div>
+          <button class="rp-close-btn" type="button" onclick="cancelReport()" title="Back to Dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="rp-mode-switch" id="rp-mode-switch">
+          <button class="rp-mode-btn active" type="button" data-mode="incident" onclick="setReportMode('incident')">Incident Report</button>
+          <button class="rp-mode-btn" type="button" data-mode="monitoring" onclick="setReportMode('monitoring')">Monitoring Submission</button>
+        </div>
+        <div class="rp-role-note" id="rp-role-note">Citizens can report incidents. Monitoring teams, industry users, and officers can submit readings.</div>
+
+        <div id="rp-incident-panel">
+          <div class="rp-section-label">INCIDENT TYPE</div>
+          <div class="rp-cat-grid">
+            <button class="rp-cat-btn" data-cat="burning" onclick="selectCategory('burning')">
+              <span class="rp-cat-icon">🔥</span>
+              <span class="rp-cat-label">Illegal Burning</span>
+            </button>
+            <button class="rp-cat-btn" data-cat="vehicle" onclick="selectCategory('vehicle')">
+              <span class="rp-cat-icon">🚗</span>
+              <span class="rp-cat-label">Vehicle Smoke</span>
+            </button>
+            <button class="rp-cat-btn" data-cat="industrial" onclick="selectCategory('industrial')">
+              <span class="rp-cat-icon">🏭</span>
+              <span class="rp-cat-label">Industrial</span>
+            </button>
+            <button class="rp-cat-btn" data-cat="other" onclick="selectCategory('other')">
+              <span class="rp-cat-icon">⚠️</span>
+              <span class="rp-cat-label">Other Hazard</span>
+            </button>
+          </div>
+
+          <div class="rp-section-label">DESCRIPTION</div>
+          <textarea id="rp-description" class="rp-textarea"
+            placeholder="Describe the incident — location details, severity, source…"
+            rows="3"></textarea>
+
+          <div class="rp-section-label">ATTACH PHOTO / VIDEO <span class="rp-optional">optional</span></div>
+          <label class="rp-upload-zone" for="rp-file-input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="24" height="24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Upload or tap to capture</span>
+            <input id="rp-file-input" type="file" accept="image/*,video/*" capture="environment"
+              onchange="handleMediaUpload(this)" style="display:none">
+          </label>
+          <div class="rp-media-preview" id="rp-media-preview"></div>
+        </div>
+
+        <div id="rp-monitoring-panel" hidden>
+          <div class="rp-section-label">SUBMISSION TYPE</div>
+          <div class="rp-sensor-tabs">
+            <button class="rp-sensor-btn active" type="button" data-monitoring-type="air" onclick="setMonitoringType('air')">Air</button>
+            <button class="rp-sensor-btn" type="button" data-monitoring-type="water" onclick="setMonitoringType('water')">Water</button>
+            <button class="rp-sensor-btn" type="button" data-monitoring-type="noise" onclick="setMonitoringType('noise')">Noise</button>
+          </div>
+
+          <div class="rp-role-note" id="rp-monitoring-helper">Capture only air-impact readings for this submission.</div>
+
+          <div class="rp-section-label" id="rp-required-label">MINIMUM REQUIRED AIR READINGS</div>
+          <div class="rp-field-grid" id="rp-fields-air">
+            <label class="rp-field-card"><span>AQI</span><input id="mon-air-aqi" type="number" step="0.1" placeholder="e.g. 142"></label>
+            <label class="rp-field-card"><span>PM2.5</span><input id="mon-air-pm25" type="number" step="0.1" placeholder="µg/m³"></label>
+            <label class="rp-field-card"><span>PM10</span><input id="mon-air-pm10" type="number" step="0.1" placeholder="µg/m³"></label>
+          </div>
+
+          <div class="rp-field-grid" id="rp-fields-water" hidden>
+            <label class="rp-field-card"><span>pH</span><input id="mon-water-ph" type="number" step="0.1" placeholder="e.g. 7.2"></label>
+            <label class="rp-field-card"><span>BOD</span><input id="mon-water-bod" type="number" step="0.1" placeholder="mg/L"></label>
+            <label class="rp-field-card"><span>COD</span><input id="mon-water-cod" type="number" step="0.1" placeholder="mg/L"></label>
+          </div>
+
+          <div class="rp-field-grid" id="rp-fields-noise" hidden>
+            <label class="rp-field-card rp-field-card-wide"><span>Average dB</span><input id="mon-noise-avg" type="number" step="0.1" placeholder="e.g. 72"></label>
+          </div>
+
+          <div class="rp-section-label" id="rp-advanced-label">ADDITIONAL AIR PARAMETERS <span class="rp-optional">optional</span></div>
+          <div class="rp-field-grid" id="rp-advanced-air">
+            <label class="rp-field-card"><span>NO2</span><input id="mon-air-no2" type="number" step="0.1" placeholder="ppb"></label>
+            <label class="rp-field-card"><span>SO2</span><input id="mon-air-so2" type="number" step="0.1" placeholder="ppb"></label>
+            <label class="rp-field-card"><span>O3</span><input id="mon-air-o3" type="number" step="0.1" placeholder="ppb"></label>
+            <label class="rp-field-card"><span>CO</span><input id="mon-air-co" type="number" step="0.1" placeholder="mg/m³"></label>
+          </div>
+
+          <div class="rp-field-grid" id="rp-advanced-water" hidden>
+            <label class="rp-field-card"><span>DO</span><input id="mon-water-do" type="number" step="0.1" placeholder="mg/L"></label>
+            <label class="rp-field-card"><span>Turbidity</span><input id="mon-water-turbidity" type="number" step="0.1" placeholder="NTU"></label>
+            <label class="rp-field-card"><span>Conductivity</span><input id="mon-water-conductivity" type="number" step="0.1" placeholder="µS/cm"></label>
+          </div>
+
+          <div class="rp-field-grid" id="rp-advanced-noise" hidden>
+            <label class="rp-field-card"><span>Min dB</span><input id="mon-noise-min" type="number" step="0.1" placeholder="optional"></label>
+            <label class="rp-field-card"><span>Max dB</span><input id="mon-noise-max" type="number" step="0.1" placeholder="optional"></label>
+          </div>
+
+          <div class="rp-section-label">FIELD NOTE <span class="rp-optional">optional</span></div>
+          <textarea id="rp-monitoring-note" class="rp-textarea" placeholder="Sample source, shift, equipment note, or observation..." rows="3"></textarea>
+        </div>
+
+        <!-- LOCATION -->
+        <div class="rp-section-label">LOCATION</div>
+        <div class="rp-location-row">
+          <div class="rp-coords-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14">
+              <circle cx="12" cy="10" r="3"/>
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            </svg>
+            <span id="rp-coords" class="rp-coords-text">21.19380, 81.35090</span>
+          </div>
+          <button class="rp-detect-btn" id="rp-detect-btn" type="button" onclick="detectLocation()">📍 Detect Location</button>
+        </div>
+        <div class="rp-map-hint">Or drag the pin / tap the map to adjust →</div>
+
+        <!-- ACTIONS -->
+        <div class="rp-actions">
+          <button class="rp-cancel-btn" type="button" onclick="cancelReport()">Cancel</button>
+          <button class="rp-submit-btn" id="rp-submit-btn" type="button" onclick="submitReport()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/>
+            </svg>
+            <span id="rp-submit-label">Submit Report</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: MINI MAP -->
+    <div class="rp-map-col">
+      <div id="report-map" class="rp-minimap"></div>
+      <div class="rp-minimap-label">📍 Tap map or drag pin to set exact location</div>
+    </div>
+
+  </section>
+
+  <section class="dashboard-copilot" id="dashboard-copilot" data-role-require="copilot">
+    <button class="dashboard-copilot-toggle" id="dashboard-copilot-toggle" type="button" aria-expanded="false" aria-controls="dashboard-copilot-panel" title="Open AI Copilot">
+      <span class="dashboard-copilot-toggle-icon">AI</span>
+      <span class="dashboard-copilot-toggle-label">Copilot</span>
+    </button>
+
+    <div class="dashboard-copilot-panel" id="dashboard-copilot-panel" hidden>
+      <div class="dashboard-copilot-header">
+        <div>
+          <div class="dashboard-copilot-title">AI Compliance Copilot</div>
+          <div class="dashboard-copilot-subtitle">Live dashboard assistant</div>
+        </div>
+        <button class="dashboard-copilot-close" id="dashboard-copilot-close" type="button" aria-label="Close Copilot">×</button>
+      </div>
+
+      <div class="dashboard-copilot-messages" id="dashboard-copilot-messages">
+        <div class="dashboard-copilot-msg bot">
+          <div class="dashboard-copilot-bubble">Ask about live pollution, violations, or mitigation actions for the selected context.</div>
+          <div class="dashboard-copilot-meta">Copilot</div>
+        </div>
+      </div>
+
+      <div class="dashboard-copilot-typing" id="dashboard-copilot-typing" hidden>
+        <span></span><span></span><span></span>
+      </div>
+
+      <form class="dashboard-copilot-form" id="dashboard-copilot-form">
+        <textarea id="dashboard-copilot-input" class="dashboard-copilot-input" rows="1" placeholder="Ask Copilot about the selected industry or ward..."></textarea>
+        <button id="dashboard-copilot-send" class="dashboard-copilot-send" type="submit" aria-label="Send message">→</button>
+      </form>
+    </div>
+  </section>
+
+  <script src="roles.js"></script>
+  <script src="app.js"></script>
+  <script src="reporter.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="dashboard-copilot.js"></script>
+</body>
+
+</html>

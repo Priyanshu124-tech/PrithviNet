@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrithviNet — AI Compliance Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Copilot Specific Styles */
+    :root {
+      --glass-edge: rgba(148, 163, 184, 0.22);
+      --glass-dark: rgba(15, 23, 42, 0.58);
+      --glass-mid: rgba(30, 41, 59, 0.52);
+      --glass-soft: rgba(148, 163, 184, 0.14);
+      --txt-main: #e2e8f0;
+      --txt-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-strong: #0ea5e9;
+    }
+
+    body {
+      color: var(--txt-main);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 82% 15%, rgba(14, 165, 233, 0.22), transparent 34%),
+        radial-gradient(circle at 20% 88%, rgba(59, 130, 246, 0.2), transparent 32%),
+        linear-gradient(165deg, #081226 0%, #0b1328 45%, #081226 100%);
+    }
+
+    .main-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.52) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* Header Area */
+    .header-area {
+      margin: 16px 20px 0;
+      padding: 22px 24px 16px;
+      border: 1px solid var(--glass-edge);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.62), rgba(30, 41, 59, 0.45));
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(2, 6, 23, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      letter-spacing: 0.1px;
+    }
+
+    .header-desc {
+      color: var(--txt-muted);
+      font-size: 15px;
+      margin-top: 9px;
+      margin-left: 40px;
+      line-height: 1.45;
+    }
+
+    /* Chat Area */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin: 16px 20px 20px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--glass-edge);
+      background: linear-gradient(160deg, var(--glass-dark) 0%, var(--glass-mid) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 28px 50px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .messages-area {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.36) 100%);
+    }
+    
+    .msg { max-width: 85%; line-height: 1.5; font-size: 15px; }
+    .msg.user { align-self: flex-end; }
+    .msg.bot { align-self: flex-start; }
+    
+    .msg-bubble {
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      box-shadow: 0 8px 24px rgba(2, 6, 23, 0.22);
+    }
+
+    .msg.user .msg-bubble {
+      background: linear-gradient(145deg, #0284c7, #0ea5e9);
+      border-color: rgba(186, 230, 253, 0.45);
+      color: white;
+      border-bottom-right-radius: 6px;
+    }
+
+    .msg.bot .msg-bubble {
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: var(--txt-main);
+      border-bottom-left-radius: 6px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    
+    /* Markdown Styles in Bot Bubble */
+    .msg.bot .msg-bubble p { margin-top: 0; margin-bottom: 12px; }
+    .msg.bot .msg-bubble p:last-child { margin-bottom: 0; }
+    .msg.bot .msg-bubble strong { color: #67e8f9; font-weight: 700; }
+    .msg.bot .msg-bubble ul, .msg.bot .msg-bubble ol { margin: 10px 0; padding-left: 20px; }
+    .msg.bot .msg-bubble li { margin-bottom: 6px; }
+
+    .msg-meta { font-size: 11px; color: #8294ac; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+    .msg.user .msg-meta { text-align: right; }
+
+    /* Input Area */
+    .input-area {
+      padding: 18px 22px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.58) 0%, rgba(15, 23, 42, 0.75) 100%);
+      border-top: 1px solid rgba(148, 163, 184, 0.26);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* Quick Prompts */
+    .quick-prompts { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .btn-prompt {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .btn-prompt:hover {
+      background: rgba(56, 189, 248, 0.2);
+      color: #e0f2fe;
+      border-color: rgba(103, 232, 249, 0.55);
+    }
+    .btn-prompt.primary {
+      background: rgba(14, 165, 233, 0.22);
+      color: #bae6fd;
+      border-color: rgba(14, 165, 233, 0.46);
+    }
+
+    /* Input Form */
+    .input-form { display: flex; gap: 12px; }
+    .input-box {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      resize: none;
+      overflow: hidden;
+      min-height: 24px;
+      max-height: 120px;
+      outline: none;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .input-box::placeholder { color: #94a3b8; }
+    .input-box:focus { border-color: rgba(56, 189, 248, 0.68); box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.22); }
+    .btn-send {
+      background: linear-gradient(145deg, #06b6d4, #0284c7);
+      color: #f0f9ff;
+      border: 1px solid rgba(103, 232, 249, 0.55);
+      border-radius: 12px;
+      width: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      box-shadow: 0 10px 22px rgba(2, 132, 199, 0.3);
+    }
+    .btn-send:hover { background: linear-gradient(145deg, #22d3ee, #0284c7); transform: translateY(-1px); }
+    .btn-send:disabled { background: #475569; color: #94a3b8; border-color: transparent; cursor: not-allowed; box-shadow: none; transform: none; }
+    .btn-send svg { width: 20px; height: 20px; fill: currentColor; }
+
+    /* Typing Indicator */
+    .typing { display: none; align-self: flex-start; gap: 5px; padding: 10px 15px; background: rgba(15, 23, 42, 0.52); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(148, 163, 184, 0.24); backdrop-filter: blur(8px); }
+    .typing.active { display: flex; }
+    .dot { width: 6px; height: 6px; background: #7dd3fc; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    @media (max-width: 900px) {
+      .header-area {
+        margin: 10px 10px 0;
+        padding: 16px 14px 13px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .header-desc {
+        margin-left: 0;
+        font-size: 13px;
+      }
+
+      .chat-container {
+        margin: 10px;
+      }
+
+      .messages-area {
+        padding: 14px;
+      }
+
+      .input-area {
+        padding: 12px;
+      }
+
+      .quick-prompts {
+        gap: 8px;
+      }
+
+      .btn-prompt {
+        font-size: 12px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="role-super_admin">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" stroke="#00d4ff" stroke-width="2" />
+        <path d="M10 16 Q13 10 16 16 Q19 22 22 16" stroke="#00d4ff" stroke-width="2" fill="none" stroke-linecap="round" />
+        <circle cx="16" cy="16" r="3" fill="#00d4ff" />
+      </svg>
+      <span class="brand-text">PrithviNet</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </a>
+      <a href="entities.html" class="nav-item" title="Entity Management" data-role-require="entities">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 22h16M4 2v20M20 2v20M8 22V6h8v16M12 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <a href="civic.html" class="nav-item" title="Compliance Dashboard" data-role-require="civic">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </a>
+      <!-- COPILOT LINK -->
+      <a href="copilot.html" class="nav-item active" title="AI Copilot" data-role-require="copilot">
+        <div class="nav-indicator"></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+      </a>
+    </nav>
+    <div class="sidebar-status">
+      <div class="status-dot online"></div>
+      <span>Online</span>
+    </div>
+    <div id="role-indicator">👑 <span>Super Admin</span></div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrap">
+    <div class="header-area">
+      <h1>
+        <svg viewBox="0 0 24 24" fill="none" width="28" height="28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        </svg>
+        AI Compliance Copilot
+      </h1>
+      <div class="header-desc">Powered by Gemini Space-Time Analysis. The Copilot securely accesses live telemetry readings, current prescribed limits, and active alarms for the Bhilai context.</div>
+    </div>
+
+    <!-- CHAT INTERFACE -->
+    <div class="chat-container">
+      <div class="messages-area" id="chat-messages">
+        <!-- Initial Greeting -->
+        <div class="msg bot">
+          <div class="msg-bubble">
+            <p>Welcome to the <strong>PrithviNet Compliance Engine</strong>. I am synced with the live telemetry from the Bhilai Environmental Dashboard.</p>
+            <p>I can help you audit current levels against NAAQS limits, generate mitigation protocols, or simulate accident scenarios. How can I assist you today?</p>
+          </div>
+          <div class="msg-meta">System • Just now</div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing" id="typing-indicator" style="margin-left: 25px;">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+
+      <div class="input-area">
+        <!-- Quick Prompts -->
+        <div class="quick-prompts">
+          <button class="btn-prompt primary" onclick="setPrompt('Simulate a scenario where the Sector 6 steel plant experiences a scrubber failure, increasing SO₂ emissions by 40% and wastewater discharge temperature by 5°C. Detail the immediate compliance violations and list the required mitigation steps for the Regional Officer.')">⚡ Pitch Demo Scenario: Scrubber Failure</button>
+          <button class="btn-prompt" onclick="setPrompt('What are my current active Critical alerts across all monitoring stations?')">List Critical Alerts</button>
+          <button class="btn-prompt" onclick="setPrompt('Generate a summary report of the current water quality index parameters against CPCB limits.')">Summarize Water Quality</button>
+        </div>
+
+        <!-- Input Box -->
+        <form class="input-form" id="chat-form">
+          <textarea class="input-box" id="chat-input" rows="1" placeholder="Ask the Copilot to analyze data, identify violations, or simulate scenarios..."></textarea>
+          <button type="submit" class="btn-send" id="btn-send" title="Send (Enter)">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="roles.js"></script>
+  <script src="copilot.js"></script>
+</body>
+</html>

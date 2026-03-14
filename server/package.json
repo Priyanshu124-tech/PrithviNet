@@ -1,0 +1,16 @@
+{
+  "name": "prithvinet-backend",
+  "version": "2.0.0",
+  "description": "PrithviNet — Smart Environmental Monitoring & Compliance Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "node-fetch": "^2.7.0"
+  }
+}

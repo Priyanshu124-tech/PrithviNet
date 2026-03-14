@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrithviNet — Entity Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Basic, functional CSS for Entity Management per user request */
+    body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; display: flex; height: 100vh; margin: 0; overflow: hidden; }
+    .main-wrap { flex: 1; padding: 30px; overflow-y: auto; }
+    h1 { margin-top: 0; font-size: 24px; color: #e2e8f0; display: flex; align-items: center; gap: 10px; }
+    
+    .tabs { display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .tab-btn { background: none; border: none; color: #94a3b8; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 16px; border-radius: 6px; transition: all 0.2s; }
+    .tab-btn:hover { background: #1e293b; color: #f1f5f9; }
+    .tab-btn.active { background: #00d4ff; color: #0f172a; }
+
+    .panel { display: none; background: #1e293b; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .panel.active { display: block; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .btn-add { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-add:hover { background: #059669; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #334155; }
+    th { color: #94a3b8; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { font-size: 14px; color: #e2e8f0; }
+    tr:last-child td { border-bottom: none; }
+    
+    .actions { display: flex; gap: 10px; }
+    .btn-edit { background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn-del { background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    
+    /* Simple Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1050; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: #1e293b; border-radius: 12px; padding: 25px; width: 500px; max-width: 90%; box-shadow: 0 20px 25px rgba(0,0,0,0.5); }
+    .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; font-weight: 500; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+    .btn-cancel { background: #475569; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .btn-save { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  </style>
+</head>
+<body class="role-super_admin">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" stroke="#00d4ff" stroke-width="2" />
+        <path d="M10 16 Q13 10 16 16 Q19 22 22 16" stroke="#00d4ff" stroke-width="2" fill="none" stroke-linecap="round" />
+        <circle cx="16" cy="16" r="3" fill="#00d4ff" />
+      </svg>
+      <span class="brand-text">PrithviNet</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </a>
+      <a href="entities.html" class="nav-item active" title="Entity Management" data-role-require="entities">
+        <div class="nav-indicator"></div>
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 22h16M4 2v20M20 2v20M8 22V6h8v16M12 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <a href="civic.html" class="nav-item" title="Compliance Dashboard" data-role-require="civic">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </a>
+    </nav>
+    <div class="sidebar-status">
+      <div class="status-dot online"></div>
+      <span>Online</span>
+    </div>
+    <div id="role-indicator">👑 <span>Super Admin</span></div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrap">
+    <h1><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16M4 2v20M20 2v20M8 22V6h8v16M12 10v4"/></svg> Master Entity Management</h1>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" data-target="offices">Regional Offices</button>
+      <button class="tab-btn" data-target="industries">Industries</button>
+      <button class="tab-btn" data-target="locations">Monitoring Locations</button>
+    </div>
+
+    <!-- PANEL: REGIONAL OFFICES -->
+    <div class="panel active" id="panel-offices">
+      <div class="toolbar">
+        <h2>Regional Offices</h2>
+        <button class="btn-add" onclick="openModal('office')">+ Add New</button>
+      </div>
+      <table id="table-offices">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>District</th>
+            <th>Head Officer</th>
+            <th>Lat/Lon</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody><!-- Populated via JS --></tbody>
+      </table>
+    </div>
+
+    <!-- PANEL: INDUSTRIES -->
+    <div class="panel" id="panel-industries">
+      <div class="toolbar">
+        <h2>Industries</h2>
+        <button class="btn-add" onclick="openModal('industry')">+ Add New</button>
+      </div>
+      <table id="table-industries">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Regional Office</th>
+            <th>Consent Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody><!-- Populated via JS --></tbody>
+      </table>
+    </div>
+
+    <!-- PANEL: MONITORING LOCATIONS -->
+    <div class="panel" id="panel-locations">
+      <div class="toolbar">
+        <h2>Monitoring Locations</h2>
+        <button class="btn-add" onclick="openModal('location')">+ Add New</button>
+      </div>
+      <table id="table-locations">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Region/Desc</th>
+            <th>Lat/Lon</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody><!-- Populated via JS --></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="entity-modal">
+    <div class="modal-content">
+      <div class="modal-title" id="modal-title">Add Entity</div>
+      <form id="entity-form">
+        <input type="hidden" id="f-id" />
+        <input type="hidden" id="f-entity-type" />
+        <div id="dynamic-form-fields"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-save">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="roles.js"></script>
+  <script src="entities.js"></script>
+</body>
+</html>
