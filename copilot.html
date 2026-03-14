@@ -133,6 +133,37 @@
     .msg.bot .msg-bubble ul, .msg.bot .msg-bubble ol { margin: 10px 0; padding-left: 20px; }
     .msg.bot .msg-bubble li { margin-bottom: 6px; }
 
+    .summarize-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .summarize-btn:hover:not(:disabled) {
+      background: rgba(56, 189, 248, 0.2);
+    }
+    .summarize-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .tldr-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(14, 165, 233, 0.15);
+      border-left: 4px solid var(--accent-strong);
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .tldr-box strong { color: var(--accent-strong) !important; }
+
     .msg-meta { font-size: 11px; color: #8294ac; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
     .msg.user .msg-meta { text-align: right; }
 
@@ -330,6 +361,23 @@
             <p>I can help you audit current levels against NAAQS limits, generate mitigation protocols, or simulate accident scenarios. How can I assist you today?</p>
           </div>
           <div class="msg-meta">System • Just now</div>
+          <button class="tldr-btn" style="margin-top:10px; padding:4px 8px; font-size:12px; cursor:pointer; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:4px;" onclick="
+            this.textContent = 'Summarizing...';
+            this.disabled = true;
+            fetch('/api/copilot/summarize-msg', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: 'Welcome to the PrithviNet Compliance Engine. I am synced with the live telemetry from the Bhilai Environmental Dashboard. I can help you audit current levels against NAAQS limits, generate mitigation protocols, or simulate accident scenarios. How can I assist you today?' })
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'ok') {
+                    const box = document.createElement('div');
+                    box.style.cssText = 'margin-top:10px; padding:10px; background:#f0fdf4; border-left:4px solid #16a34a; font-size:13px; color:#166534; border-radius:4px;';
+                    box.innerHTML = '<strong>TL;DR:</strong> ' + data.summary;
+                    this.parentElement.appendChild(box);
+                    this.remove();
+                } else this.textContent = 'Error';
+            }).catch(() => this.textContent = 'Failed')
+          ">Summarize this message</button>
         </div>
       </div>
 

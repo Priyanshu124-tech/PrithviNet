@@ -6,104 +6,12 @@ const authz = require('../authz');
 
 router.use(authz.attachActor);
 
-const GEMINI_KEY = 'AIzaSyAQyqmDTcB_vCk6SiwVjfPsHCNvEizLDfY';
-const GEMINI_MODEL = 'gemini-2.0-flash'; // High-capability model for the Copilot
+const GEMINI_KEY = 'AIzaSyBO8yyFY5aDm9cBN9GPHA807Slbo5Hb5Vw';
+const GEMINI_MODEL = 'gemini-3-flash-preview';
 
 function geminiUrl(model) {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
 }
-
-// Helper to bundle all context for a specific location
-function buildLiveContext(locationId) {
-  // 1. Get the current status of the location
-  const locations = db.getAllMonitoringLocations();
-  const loc = locations.find(l => l.id === parseInt(locationId)) || locations[0]; // fallback
-  
-  if (!loc) return "No location active.";
-
-  const rawDb = db.getDb();
-
-  // 2. Get latest live readings
-  const stmt1 = rawDb.prepare(`
-    SELECT * FROM monitoring_data 
-    WHERE location_id = ? AND type = ?
-    ORDER BY recorded_at DESC LIMIT 1
-  `);
-  let airLatest = stmt1.get(loc.id, 'air') || {};
-  let waterLatest = stmt1.get(loc.id, 'water') || {};
-  let noiseLatest = stmt1.get(loc.id, 'noise') || {};
-
-  // fallback if the actual ID mismatch (e.g demo vs location select)
-  if (!airLatest.aqi) airLatest = rawDb.prepare(`SELECT * FROM monitoring_data WHERE type = 'air' ORDER BY recorded_at DESC LIMIT 1`).get() || {};
-  if (!waterLatest.ph) waterLatest = rawDb.prepare(`SELECT * FROM monitoring_data WHERE type = 'water' ORDER BY recorded_at DESC LIMIT 1`).get() || {};
-  if (!noiseLatest.noise_level_db) noiseLatest = rawDb.prepare(`SELECT * FROM monitoring_data WHERE type = 'noise' ORDER BY recorded_at DESC LIMIT 1`).get() || {};
-
-  // 3. Get Prescribed Limits (table has NO location_id — it stores global CPCB/NAAQS limits)
-  let limits = [];
-  try {
-     limits = rawDb.prepare(`SELECT * FROM prescribed_limits ORDER BY type, parameter`).all();
-  } catch(e) { console.error('Limits Error:', e); }
-  
-  // 4. Get latest active alerts with location names
-  let alerts = [];
-  try {
-     alerts = rawDb.prepare(`
-       SELECT ca.*, ml.name as location_name 
-       FROM compliance_alerts ca
-       LEFT JOIN monitoring_locations ml ON ml.id = ca.location_id
-       WHERE ca.status = 'open' OR ca.status = 'escalated'
-       ORDER BY ca.created_at DESC LIMIT 10
-     `).all();
-  } catch(e) { console.error('Alerts Error:', e); }
-
-  let context = `
-========== DASHBOARD LIVE CONTEXT ==========
-You are the PrithviNet AI Compliance Copilot. You assist government Regional Officers (ROs) and environmental regulators in analyzing data, determining compliance, and planning mitigation strategies.
-
-Always use the following real-time data from the dashboard to answer the user's query:
-
-[CURRENT FOCUS LOCATION]
-Name: ${loc?.name || 'Unknown'}
-Type: ${loc?.type || 'Unknown'}
-Region: ${loc?.region || 'Unknown'}
-
-[LATEST LIVE READINGS]
--- Air Quality --
-AQI: ${airLatest?.aqi ?? 'N/A'}
-PM2.5: ${airLatest?.pm25 ?? 'N/A'} µg/m³
-PM10: ${airLatest?.pm10 ?? 'N/A'} µg/m³
-SO2: ${airLatest?.so2 ?? 'N/A'} ppb
-NO2: ${airLatest?.no2 ?? 'N/A'} ppb
-CO: ${airLatest?.co ?? 'N/A'} mg/m³
-O3: ${airLatest?.o3 ?? 'N/A'} ppb
-
--- Water Quality --
-pH: ${waterLatest?.ph ?? 'N/A'}
-DO: ${waterLatest?.dissolved_oxygen ?? 'N/A'} mg/L
-BOD: ${waterLatest?.bod ?? 'N/A'} mg/L
-COD: ${waterLatest?.cod ?? 'N/A'} mg/L
-Turbidity: ${waterLatest?.turbidity ?? 'N/A'} NTU
-
--- Noise --
-Level: ${noiseLatest?.noise_level_db ?? 'N/A'} dB(A)
-Min: ${noiseLatest?.noise_min_db ?? 'N/A'} dB(A)
-Max: ${noiseLatest?.noise_max_db ?? 'N/A'} dB(A)
-
-[MANDATED LEGAL LIMITS (CPCB/NAAQS)]
-${limits.map(l => `- ${l.type.toUpperCase()} / ${l.parameter}: ${l.limit_min !== null ? `Min ${l.limit_min}` : ''} ${l.limit_max !== null ? `Max ${l.limit_max}` : ''} ${l.unit} (${l.source})`).join('\n')}
-
-[ACTIVE COMPLIANCE ALERT QUEUE (${alerts.length} active)]
-${alerts.length === 0 ? 'No active alerts.' : alerts.map(a => `- [${(a.severity || 'warning').toUpperCase()}] ${a.location_name || 'Unknown'}: ${a.parameter} recorded ${a.recorded_value} vs limit ${a.prescribed_limit} (${a.message || ''})`).join('\n')}
-
-INSTRUCTIONS:
-1. Ground your analysis strictly on the numbers above.
-2. If the user asks for a scenario simulation, use the Current Live Readings as your baseline, apply the simulation adjustments, check them against the Legal Limits, and output the required actions for the RO.
-3. Format your response cleanly using Markdown (bullet points, bolding for emphasis on parameters, avoid overly verbose paragraphs).
-============================================`;
-
-  return context;
-}
-
 
 // POST /api/copilot/ask
 router.post('/ask', async (req, res) => {
@@ -119,43 +27,81 @@ router.post('/ask', async (req, res) => {
 
     const { message, location_id } = req.body;
     
-    // Dynamic Context Injection
-    const liveContextContext = buildLiveContext(location_id || 1);
+    // 1. Fetch live database context
+    const rawDb = db.getDb();
+    
+    let monitoringData = [];
+    try {
+      monitoringData = rawDb.prepare(`
+        SELECT md.*, ml.name as location_name 
+        FROM monitoring_data md
+        LEFT JOIN monitoring_locations ml ON ml.id = md.location_id
+        ORDER BY md.recorded_at DESC LIMIT 15
+      `).all();
+    } catch (e) {
+      console.error('[Copilot] Failed to fetch monitoring data:', e.message);
+    }
 
-    const monitorTeamPolicy = role === authz.ROLES.MONITORING_TEAM
-      ? '\n\nROLE POLICY: Provide advisory-only field guidance. Do not issue escalation orders or regulatory commands.'
-      : '';
+    let complianceAlerts = [];
+    try {
+      complianceAlerts = rawDb.prepare(`
+        SELECT ca.*, ml.name as location_name
+        FROM compliance_alerts ca
+        LEFT JOIN monitoring_locations ml ON ml.id = ca.location_id
+        WHERE ca.status IN ('open', 'new', 'escalated', 'acknowledged', 'in_action')
+      `).all();
+    } catch (e) {
+      console.error('[Copilot] Failed to fetch compliance alerts:', e.message);
+    }
 
-    const fullPrompt = `${liveContextContext}${monitorTeamPolicy}\n\nUSER QUERY: ${message}\n\nYOUR RESPONSE:`;
+    // 2. Build system instruction
+    const dbContext = JSON.stringify({ 
+      monitoring_data: monitoringData, 
+      compliance_alerts: complianceAlerts 
+    }, null, 2);
+
+    const systemInstruction = `You are the PrithviNet Predictive Causal Engine, an advanced AI surrogate model for environmental compliance. You have access to live IoT telemetry and active compliance alerts:
+${dbContext}
+
+When the user asks a 'What-If' intervention query (e.g., emissions reductions, temporary shutdowns), you must act as a structural model and calculate the projected outcomes. Analyze the current baseline data from the injected JSON and generate a highly analytical response covering:
+1. Baseline vs. Intervention: State the current pollution load based on the data, and mathematically estimate the reduction (e.g., 'A 30% reduction in SO2 from X equates to a drop from Y µg/m³ to Z µg/m³').
+2. Regional Risk Projection: Predict how this intervention changes the risk profile for surrounding residential/civic wards over the requested timeline.
+3. Causal Cascades: Identify secondary benefits (e.g., reduced PM2.5 formation, lower water turbidity).
+4. Policy Recommendations: Suggest how the Regional Officer should monitor or enforce this intervention.
+
+Format your response in professional Markdown, using bullet points and bold text for readability. Sound highly analytical, scientific, and data-driven.`;
+
+    // 3. Construct prompt
+    const fullPrompt = `${systemInstruction}\n\nUSER QUERY: ${message}\n\nYOUR RESPONSE:`;
 
     const payload = {
       contents: [{ parts: [{ text: fullPrompt }] }],
-      generationConfig: { temperature: 0.2 } // Keep it deterministic and factual
+      generationConfig: { temperature: 0.1 } // Extremely low temperature for strict formatting compliance
     };
 
+    // 4. API Call
     const url = geminiUrl(GEMINI_MODEL);
     const response = await fetch(url, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload)
+      body: JSON.stringify(payload)
     });
 
     const json = await response.json();
-    
+
     if (json.error) {
-       console.error('[Copilot] API Error:', JSON.stringify(json.error));
-       return res.status(502).json({ error: 'Upstream AI Error', details: json.error });
+      console.error('[Copilot] Gemini API Error:', json.error);
+      return res.status(502).json({ error: 'Upstream AI Error', details: json.error });
     }
 
-    // Extract text from Gemini response safely
-    let answerText = "Sorry, I could not generate a response. The AI model might be temporarily unavailable or out of quota.";
+    let answerText = "Sorry, I could not generate a response. The AI model might be temporarily unavailable.";
     try {
       if (json?.candidates?.[0]?.content?.parts?.[0]?.text) {
-         answerText = json.candidates[0].content.parts[0].text;
+        answerText = json.candidates[0].content.parts[0].text;
       } else {
-         console.warn('[Copilot] Unexpected Gemini Response Format:', JSON.stringify(json).substring(0, 200));
+        console.warn('[Copilot] Unexpected response format:', JSON.stringify(json).substring(0, 200));
       }
-    } catch(e) {
+    } catch (e) {
       console.error('[Copilot] Parse Error:', e);
     }
 
@@ -164,6 +110,53 @@ router.post('/ask', async (req, res) => {
   } catch (err) {
     console.error('[Copilot] Route Error:', err);
     res.status(500).json({ error: err.message || 'Failed to process copilot query' });
+  }
+});
+
+// POST /api/copilot/summarize-msg
+router.post('/summarize-msg', async (req, res) => {
+  try {
+    const role = req.actor.role;
+    if (role === authz.ROLES.INDUSTRY_USER || role === authz.ROLES.CITIZEN) {
+      return res.status(403).json({ error: 'Copilot is disabled for this role' });
+    }
+
+    if (!req.body || !req.body.text) {
+      return res.status(400).json({ error: 'Missing text to summarize' });
+    }
+
+    const { text } = req.body;
+    
+    const prompt = `Summarize the following environmental analysis into a crisp, 2-sentence executive TL;DR. Do not use markdown headers: \n\n${text}`;
+    
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2 }
+    };
+
+    const url = geminiUrl(GEMINI_MODEL);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await response.json();
+
+    if (json.error) {
+      console.error('[Copilot] Gemini API Error (Summarize):', json.error);
+      return res.status(502).json({ error: 'Upstream AI Error', details: json.error });
+    }
+
+    let summaryText = "Failed to generate summary.";
+    if (json?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      summaryText = json.candidates[0].content.parts[0].text;
+    }
+
+    res.json({ status: 'ok', summary: summaryText });
+  } catch (err) {
+    console.error('[Copilot] Summarize Route Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to process summarize query' });
   }
 });
 

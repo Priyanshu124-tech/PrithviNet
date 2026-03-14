@@ -107,6 +107,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         msgDiv.appendChild(bubble);
         msgDiv.appendChild(meta);
+
+        if (sender === 'bot') {
+            const sumBtn = document.createElement('button');
+            sumBtn.className = 'tldr-btn';
+            sumBtn.textContent = 'Summarize this message';
+            sumBtn.style.cssText = 'margin-top:10px; padding:4px 8px; font-size:12px; cursor:pointer; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:4px;';
+            
+            sumBtn.addEventListener('click', async () => {
+                sumBtn.textContent = 'Summarizing...';
+                sumBtn.disabled = true;
+                
+                try {
+                    const res = await fetch('/api/copilot/summarize-msg', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.status === 'ok') {
+                        const tldrBox = document.createElement('div');
+                        tldrBox.style.cssText = 'margin-top:10px; padding:10px; background:#f0fdf4; border-left:4px solid #16a34a; font-size:13px; color:#166534; border-radius:4px;';
+                        tldrBox.innerHTML = `<strong>TL;DR:</strong> ${data.summary}`;
+                        
+                        msgDiv.appendChild(tldrBox);
+                        sumBtn.remove();
+                    } else {
+                        sumBtn.textContent = 'Error';
+                    }
+                } catch (e) {
+                    sumBtn.textContent = 'Failed';
+                }
+            });
+            
+            msgDiv.appendChild(sumBtn);
+        }
+
         messagesArea.appendChild(msgDiv);
         
         messagesArea.scrollTop = messagesArea.scrollHeight;
