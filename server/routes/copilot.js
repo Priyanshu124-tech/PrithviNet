@@ -6,7 +6,7 @@ const authz = require('../authz');
 
 router.use(authz.attachActor);
 
-const GEMINI_KEY = 'AIzaSyBO8yyFY5aDm9cBN9GPHA807Slbo5Hb5Vw';
+const GEMINI_KEY = 'AIzaSyB1HmGRqtyMI7tcmvCxkE8tCUz025NVt9w';
 const GEMINI_MODEL = 'gemini-3-flash-preview';
 
 function geminiUrl(model) {
